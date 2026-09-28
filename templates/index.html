@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChemiQuant — Chemiluminometer Concentration Analyzer</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">Chemi<span>Quant</span></div>
+    <div class="tag">server-side signal processing · ML calibration · email delivery</div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="acquire">1 · Acquire</button>
+    <button class="tab-btn" data-tab="calibrate">2 · Calibrate</button>
+    <button class="tab-btn" data-tab="results">3 · Results</button>
+  </nav>
+
+  <section class="card" id="tab-acquire">
+    <h2>Signal acquisition</h2>
+    <p class="sub">Upload a still image, or a video / GIF to scrub through and capture the peak-emission frame. Frames are decoded and analyzed on the server (OpenCV / Pillow / NumPy).</p>
+
+    <div class="row">
+      <div class="dropzone" id="dz-file">
+        <p><strong>Upload image, video or GIF</strong><br>PNG, JPG, MP4, WEBM, GIF — click or drop</p>
+        <input type="file" id="file-input" accept="image/*,video/*">
+      </div>
+      <div>
+        <label>Active analyte (for prediction)</label>
+        <select id="active-analyte"></select>
+      </div>
+    </div>
+
+    <div id="scrub-controls" class="hidden">
+      <label id="scrub-label">Scrub to the peak-emission frame</label>
+      <input type="range" id="scrub-slider" min="0" max="100" value="0" step="0.05" style="width:100%">
+    </div>
+
+    <div id="preview-wrap" class="hidden" style="margin-top:16px">
+      <img id="preview-img" alt="frame preview">
+      <div class="readout">
+        <div class="stat"><label>mean intensity</label><div class="val" id="stat-intensity">—</div></div>
+        <div class="stat"><label>peak pixel</label><div class="val" id="stat-peak">—</div></div>
+        <div class="stat"><label>hotspot area</label><div class="val" id="stat-area">—</div></div>
+      </div>
+      <button class="btn" id="use-frame-btn" style="margin-top:12px">Use this frame → Predict concentration</button>
+    </div>
+    <div class="note">Every scrub position re-requests <code>/api/frame/&lt;id&gt;</code>, which decodes that exact frame server-side rather than approximating it in the browser.</div>
+  </section>
+
+  <section class="card hidden" id="tab-calibrate">
+    <h2>Calibration</h2>
+    <p class="sub">Choose a library preset or enter your own standards. Fitting is done server-side with scikit-learn's linear regression and persisted to the database.</p>
+
+    <div class="row">
+      <div>
+        <label>Analyte</label>
+        <select id="analyte-lib"></select>
+      </div>
+      <div>
+        <label>Units</label>
+        <input type="text" id="conc-units" value="µM">
+      </div>
+    </div>
+
+    <table id="cal-table">
+      <thead><tr><th>Concentration</th><th>Measured intensity</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn ghost" id="add-row">+ Add standard</button>
+      <button class="btn secondary" id="save-cal">Fit &amp; save curve</button>
+    </div>
+
+    <div class="readout">
+      <div class="stat"><label>slope (m)</label><div class="val" id="stat-slope">—</div></div>
+      <div class="stat"><label>intercept (b)</label><div class="val" id="stat-intercept">—</div></div>
+      <div class="stat"><label>R²</label><div class="val" id="stat-r2">—</div></div>
+    </div>
+    <canvas id="cal-canvas" height="180"></canvas>
+  </section>
+
+  <section class="card hidden" id="tab-results">
+    <h2>Concentration estimate</h2>
+    <p class="sub">Pulled from the most recent prediction saved to the database.</p>
+
+    <div class="result-hero">
+      <div class="badge" id="fit-badge">no prediction yet</div>
+      <div class="num" id="result-value">—</div>
+      <div class="unit" id="result-unit">concentration</div>
+    </div>
+
+    <table>
+      <tbody>
+        <tr><td>Analyte</td><td id="r-analyte" class="mono">—</td></tr>
+        <tr><td>Measured intensity</td><td id="r-intensity" class="mono">—</td></tr>
+        <tr><td>Calibration equation</td><td id="r-equation" class="mono">—</td></tr>
+        <tr><td>Fit quality (R²)</td><td id="r-r2" class="mono">—</td></tr>
+        <tr><td>Timestamp</td><td id="r-time" class="mono">—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="row" style="margin-top:14px">
+      <input type="text" id="email-to" placeholder="recipient@example.com">
+      <button class="btn" id="send-email-btn">Send result by email</button>
+    </div>
+    <div id="email-status" class="note"></div>
+
+    <h2 style="margin-top:24px">Recent history</h2>
+    <table id="history-table"><thead><tr><th>Time</th><th>Analyte</th><th>Conc.</th></tr></thead><tbody></tbody></table>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
